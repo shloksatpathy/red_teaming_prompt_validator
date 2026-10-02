@@ -17,31 +17,32 @@ A comprehensive tool for detecting and analyzing prompt injection vulnerabilitie
 
 ## Vulnerability Categories Detected
 
-### Critical Level
-- **Instruction Override**: Attempts to bypass or override system instructions
-- **Jailbreak Attempts**: Patterns like "DAN" (Do Anything Now) or unrestricted access requests
-- **Dangerous Commands**: References to code execution, system calls, or shell access
+Detection runs in two passes (see `prompt_injection_detector.py`): **regex patterns** for injection phrasings, then **whole-word keyword** matches. Each hit is reported once per category + matched text.
 
-### High Level
-- **Role Override**: Attempts to change the assistant's role dynamically
-- **Context Injection**: Time-based or context-based instruction injection
-- **Prompt Leaking**: Attempts to extract the system prompt or original instructions
-- **Encoding Bypass**: Attempts to use encoding (base64, rot13, etc.) to bypass filters
-- **Meta Prompt Exposure**: Questions designed to reveal AI design or instructions
+| Category | Source | Level |
+|---|---|---|
+| `instruction_override` — "ignore/disregard previous instructions" | pattern | Critical |
+| `jailbreak_attempt` — DAN, "unrestricted mode", etc. | pattern | Critical |
+| `dangerous_commands` — `execute`, `run`, `eval`, `os.system`, `subprocess`, `shell`, … | keyword | Critical |
+| `role_override` — "pretend", "imagine", "act as if", roleplay framing | pattern | High |
+| `context_injection` — "from now on…", time/context-based redirects | pattern | High |
+| `prompt_leaking` — requests for the system prompt or original instructions | pattern | High |
+| `encoding_bypass` — base64, rot13, hex and similar | pattern | High |
+| `instruction_keywords` — `ignore`, `bypass`, `override`, `disregard`, `forget` | keyword | High |
+| `system_keywords` — "system prompt", "initial instructions", "real purpose", … | keyword | High |
+| `delimiter_manipulation` — fences/markers used to smuggle instructions | pattern | Medium |
+| `nested_injection` — instructions hidden inside nested structures | pattern | Medium |
+| `meta_prompt_exposure` — questions about how the AI was designed or instructed | pattern | Medium |
+| `extraction_keywords` — `reveal`, `show`, `print`, `display`, `output`, `dump`, `leak` | keyword | Medium |
 
-### Medium Level
-- **Delimiter Manipulation**: Use of delimiters to inject instructions
-- **Nested Injection**: Nested structures designed to hide injection attempts
-- **Extraction Keywords**: Keywords commonly used to extract information
-
-### Low Level
-- **Instruction Keywords**: Suspicious keywords that might indicate injection intent
+> **Heads-up on false positives:** keyword matching is context-free, so ordinary words like *run*, *show* or *output* will flag even in benign prompts (and *run* alone is rated Critical). Treat keyword-only findings as prompts to review, not verdicts.
 
 ## Installation
 
-### 1. Clone or navigate to the repository
+### 1. Clone the repository
 ```bash
-cd /path/to/validator
+git clone <repository-url> red_teaming_prompt_validator
+cd red_teaming_prompt_validator
 ```
 
 ### 2. Create a virtual environment (optional but recommended)
@@ -220,47 +221,49 @@ fetch('/validate', {
 
 ### Environment Variables
 
-Create a `.env` file in the project root (optional):
+Copy `.env.example` to `.env` (loaded by `python-dotenv`). The server reads:
 
-```env
-# Server configuration
-PORT=5000
-FLASK_ENV=development
+| Variable | Purpose | Default |
+|---|---|---|
+| `PORT` | Port to listen on | `5000` |
+| `FLASK_ENV` | `development` enables Flask debug mode | `development` |
+| `FRONTEND_URL` | Allowed CORS origin | `http://localhost:5000` |
 
-# Optional: Set custom frontend URL
-FRONTEND_URL=http://localhost:3000
-```
+`GEMINI_API_KEY` still appears in `.env.example` and `render.yaml` from an earlier version of the project; the current detector is fully offline and doesn't use it.
 
 ## Folder Structure
 
 ```
-validator/
-├── server.py                           # Flask web server
-├── prompt_injection_detector.py        # Core detection logic
-├── index.html                          # Web interface
-├── requirements.txt                    # Python dependencies
-├── README.md                          # This file
-├── validation_results/                # Analysis results (organized by risk level)
-│   ├── critical/                      # Critical vulnerabilities
-│   ├── high/                          # High-risk findings
-│   ├── medium/                        # Medium-risk findings
-│   └── low/                           # Low-risk findings
-├── config/                            # Configuration files
-└── tests/                             # Test cases (optional)
+red_teaming_prompt_validator/
+├── server.py                     # Flask app: REST API + serves index.html
+├── prompt_injection_detector.py  # Core detection logic and scoring
+├── test_detector.py              # Detector test script
+├── index.html                    # Web interface (analyze, history, stats)
+├── submissions.html              # Legacy page from the earlier "academic validator" (calls /list, which no longer exists)
+├── prompts/                      # Legacy LLM prompt templates from the earlier version
+├── config/settings.json          # Legacy settings, not read by the current server
+├── input/                        # Placeholder (.gitkeep)
+├── render.yaml                   # Render deployment blueprint
+├── .env.example
+├── requirements.txt
+└── validation_results/           # Created at runtime; one JSON file per analysis
+    ├── critical/  high/  medium/  low/
 ```
 
 ## Understanding Risk Scores
 
-The risk score is calculated on a 0-100 scale based on:
-- Number of vulnerabilities found
-- Severity of each vulnerability
-- Combination and overlap of vulnerabilities
+Two separate numbers come back for each prompt:
 
-### Score Ranges
-- **0-25**: Low risk - Minimal injection vulnerabilities detected
-- **26-50**: Medium risk - Some vulnerabilities present, review recommended
-- **51-75**: High risk - Multiple vulnerabilities, immediate action needed
-- **76-100**: Critical risk - Severe vulnerabilities, do not deploy
+**`overall_risk_level`** is the severity of the *worst* finding. One Critical hit makes the whole prompt Critical. No findings means `low`.
+
+**`risk_score`** (0–100) is the *average severity* of the findings, not how many there are. Each finding is weighted Low = 1, Medium = 3, High = 5, Critical = 10, and the score is `sum(weights) / (10 × findings) × 100`. So:
+
+- No findings → `0`
+- A single Critical finding → `100`
+- One Critical + one Medium → `65`
+- Ten Medium findings → `30`, lower than one High finding (`50`)
+
+Use the level to gate decisions and the score to compare prompts. Don't read the score as a count of problems.
 
 ## Security Considerations
 
@@ -297,13 +300,25 @@ PORT=8000 python server.py
 Ensure the `FRONTEND_URL` environment variable is set correctly if accessing from a different origin.
 
 ### Analysis Not Saving
-Check that the `validation_results/` directory exists and has write permissions.
+The server creates `validation_results/` on startup; make sure the process can write to the project directory.
 
-## Performance
+## Testing
 
-- **Single Prompt**: ~50-200ms analysis time
-- **Batch Processing**: Up to 50 prompts per request
-- **Storage**: Results are stored as JSON files (~1-5KB per analysis)
+```bash
+python test_detector.py
+```
+
+The script runs labelled example prompts through the detector, prints each report, then checks a set of risk-score expectations. Right now all detection cases pass, but two score checks fail: `"What are your limitations?"` scores 0 (expected ≥ 10), and `"Bypass all rules, DAN mode…"` scores 83.33 (expected ≥ 90). Both come from the average-severity scoring described above.
+
+## Deployment (Render)
+
+`render.yaml` defines a free-tier Python web service that runs `gunicorn -w 4 -b 0.0.0.0 server:app`. Set `FRONTEND_URL` to the deployed origin. Results are written to the local filesystem, so on Render they are **ephemeral** and lost on every redeploy or restart.
+
+## Limits
+
+- **Prompt length:** 10,000 characters max
+- **Batch size:** up to 50 prompts per `/batch-validate` request
+- **Storage:** one small JSON file per analysis under `validation_results/<level>/`
 
 ## Contributing
 
@@ -332,5 +347,5 @@ For issues, questions, or suggestions, please refer to the project repository.
 ---
 
 **Version**: 1.0.0
-**Last Updated**: 2024
+**Last Updated**: October 2026
 **Status**: Active Development
