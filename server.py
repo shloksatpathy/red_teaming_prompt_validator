@@ -11,8 +11,8 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from dotenv import load_dotenv
-from prompt_injection_detector import PromptInjectionDetector
-from harden import harden_prompt
+from prompt_validator.prompt_injection_detector import PromptInjectionDetector
+from prompt_validator.harden import harden_prompt
 
 load_dotenv()
 

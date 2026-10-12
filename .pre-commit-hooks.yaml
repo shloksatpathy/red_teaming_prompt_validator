@@ -1,0 +1,6 @@
+- id: prompt-validator
+  name: prompt injection scan
+  description: Fail if a prompt file has injection findings at or above high risk
+  entry: prompt-validator
+  language: python
+  types: [text]

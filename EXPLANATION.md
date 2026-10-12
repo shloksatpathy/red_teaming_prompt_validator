@@ -1,6 +1,8 @@
 # Explanation
 
 How the repo works today, before anything in `PLAN.md` is implemented. Everything here is derived from `prompt_injection_detector.py` and `server.py`.
+> **Snapshot:** this describes the repo as it was before `PLAN.md` was implemented. Several behaviours below (keyword severities, score formula, dedup, patterns living in code, flat file layout) have since changed; see `README.md` for the current state.
+
 
 ## 1. Concept
 

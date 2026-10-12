@@ -35,7 +35,7 @@
 - [x] Run tests in CI (GitHub Actions, `.github/workflows/ci.yml`); add tests for `server.py` (`test_server.py`).
 - [x] Remove leftovers from the old project: `prompts/`, empty `input/`, `config/settings.json` (also `submissions.html`, which called the removed `/list` endpoint).
 - [x] Move detection patterns into an editable data file. (`patterns.json`: regexes, keywords, levels and suggestions)
-- [ ] Package the detector as a pip library and CLI; add a pre-commit/CI check for prompt files.
+- [x] Package the detector as a pip library and CLI; add a pre-commit/CI check for prompt files. (`pyproject.toml`, `prompt-validator` command, `.pre-commit-hooks.yaml`; no prompt files remain in this repo, so there is no CI scan step)
 
 ## Suggested order
 1. Keyword false-positive fix

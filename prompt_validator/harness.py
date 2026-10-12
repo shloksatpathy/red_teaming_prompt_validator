@@ -1,6 +1,6 @@
 from typing import Callable, Dict
 
-from attack_variants import generate_variants
+from .attack_variants import generate_variants
 
 
 def run_harness(target: Callable[[str, str], str], system_prompt: str, attack: str, canary: str) -> Dict[str, bool]:
