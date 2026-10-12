@@ -92,10 +92,11 @@ class PromptInjectionDetector:
         }
 
     def _initialize_keywords(self) -> Dict[str, Tuple[List[str], RiskLevel]]:
+        # Ambiguous single words are LOW review hints; only specific terms keep a high severity.
         return {
             "instruction_keywords": (
-                ["ignore", "bypass", "override", "disregard", "forget", "override"],
-                RiskLevel.HIGH,
+                ["ignore", "bypass", "override", "disregard", "forget"],
+                RiskLevel.LOW,
             ),
             "system_keywords": (
                 [
@@ -108,28 +109,12 @@ class PromptInjectionDetector:
                 RiskLevel.HIGH,
             ),
             "dangerous_commands": (
-                [
-                    "execute",
-                    "run",
-                    "eval",
-                    "sys.exit",
-                    "os.system",
-                    "subprocess",
-                    "shell",
-                ],
+                ["execute", "eval", "sys.exit", "os.system", "subprocess"],
                 RiskLevel.CRITICAL,
             ),
             "extraction_keywords": (
-                [
-                    "reveal",
-                    "show",
-                    "print",
-                    "display",
-                    "output",
-                    "dump",
-                    "leak",
-                ],
-                RiskLevel.MEDIUM,
+                ["reveal", "dump", "leak"],
+                RiskLevel.LOW,
             ),
         }
 
@@ -154,7 +139,7 @@ class PromptInjectionDetector:
         for category, (keywords, risk_level) in self.keywords.items():
             for keyword in keywords:
                 if re.search(rf"\b{re.escape(keyword)}\b", prompt, re.IGNORECASE):
-                    if not any(f.pattern_matched.lower() == keyword.lower() for f in findings):
+                    if not any(keyword.lower() in f.pattern_matched.lower() for f in findings):
                         findings.append(
                             VulnerabilityFinding(
                                 category=category,
@@ -165,14 +150,7 @@ class PromptInjectionDetector:
                             )
                         )
 
-        # Remove duplicates (keep most severe)
-        findings_dict = {}
-        for finding in findings:
-            key = f"{finding.category}_{finding.pattern_matched.lower()}"
-            if key not in findings_dict or finding.risk_level.value > findings_dict[key].risk_level.value:
-                findings_dict[key] = finding
-
-        return list(findings_dict.values())
+        return findings
 
     def _get_suggestion(self, category: str) -> str:
         suggestions = {
