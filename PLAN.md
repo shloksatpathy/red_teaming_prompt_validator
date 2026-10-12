@@ -32,8 +32,8 @@
 - [x] File upload for batch analysis. (.txt one prompt per line, or .json array)
 
 ## 5. Engineering hygiene
-- [ ] Run `test_detector.py` in CI (GitHub Actions); add tests for `server.py`.
-- [ ] Remove leftovers from the old project: `prompts/`, empty `input/`, `config/settings.json`.
+- [x] Run tests in CI (GitHub Actions, `.github/workflows/ci.yml`); add tests for `server.py` (`test_server.py`).
+- [x] Remove leftovers from the old project: `prompts/`, empty `input/`, `config/settings.json` (also `submissions.html`, which called the removed `/list` endpoint).
 - [ ] Move detection patterns into an editable data file.
 - [ ] Package the detector as a pip library and CLI; add a pre-commit/CI check for prompt files.
 

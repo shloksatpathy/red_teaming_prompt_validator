@@ -239,10 +239,6 @@ red_teaming_prompt_validator/
 ├── prompt_injection_detector.py  # Core detection logic and scoring
 ├── test_detector.py              # Detector test script
 ├── index.html                    # Web interface (analyze, history, stats)
-├── submissions.html              # Legacy page from the earlier "academic validator" (calls /list, which no longer exists)
-├── prompts/                      # Legacy LLM prompt templates from the earlier version
-├── config/settings.json          # Legacy settings, not read by the current server
-├── input/                        # Placeholder (.gitkeep)
 ├── render.yaml                   # Render deployment blueprint
 ├── .env.example
 ├── requirements.txt
