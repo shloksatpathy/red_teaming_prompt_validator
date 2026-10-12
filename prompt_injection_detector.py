@@ -36,7 +36,7 @@ class PromptInjectionDetector:
             ),
             "role_override": (
                 re.compile(
-                    r"forget|pretend|imagine|assume|act as if|roleplay.*(?:ignore|forget|bypass)",
+                    r"\b(?:forget|pretend|imagine|assume|act as if)\b.{0,40}\b(?:you|your|you're|ai|assistant|model)\b|\broleplay\b.*?\b(?:ignore|forget|bypass)\b",
                     re.IGNORECASE,
                 ),
                 RiskLevel.HIGH,
@@ -64,7 +64,7 @@ class PromptInjectionDetector:
             ),
             "jailbreak_attempt": (
                 re.compile(
-                    r"(?:DAN|do anything now|unrestricted|no safety|disable.*?filter)",
+                    r"(?-i:\bDAN\b)|\b(?:do anything now|unrestricted|no safety)\b|\bdisable\b.*?\bfilter",
                     re.IGNORECASE,
                 ),
                 RiskLevel.CRITICAL,
@@ -84,7 +84,7 @@ class PromptInjectionDetector:
             ),
             "encoding_bypass": (
                 re.compile(
-                    r"(?:base64|rot13|unicode|encoded|escaped).*?(?:decode|decode and execute)",
+                    r"\b(?:base64|rot13|unicode|encoded|escaped)\b.*?\bdecode\b|\bdecode\b.*?\b(?:base64|rot13|unicode)\b",
                     re.IGNORECASE,
                 ),
                 RiskLevel.HIGH,
