@@ -14,7 +14,7 @@
   - [x] Decode base64/rot13 payloads and rescan (`encoding_bypass` currently only matches the words).
 - [x] Cover more attack types: indirect injection, multi-turn attacks, non-English prompts.
 - [ ] Optional LLM-as-judge second pass for ambiguous scores.
-- [ ] Benchmark against a public injection dataset (e.g. deepset prompt-injections); report precision/recall and tune risk-score weights.
+- [x] Benchmark against a public injection dataset (e.g. deepset prompt-injections); report precision/recall and tune risk-score weights. Result: precision 1.00, recall 0.33 (`python3 benchmark/run.py`). Recall is bounded by rule coverage (many dataset injections are plain task hijacks with no trigger phrase), not by the score weights, so the weights were left as is.
 
 ## 2. Red-teaming features
 - [ ] Attack-variant generator that mutates a prompt.

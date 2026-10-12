@@ -93,3 +93,15 @@ def test_normalization_keeps_benign_clean():
 ])
 def test_other_attack_types(prompt, category):
     assert category in {f.category for f in detector.detect_vulnerabilities(prompt)}
+
+
+def test_benchmark_regression():
+    import csv
+    with open("benchmark/deepset_prompt_injections.csv", newline="") as f:
+        rows = [(r["text"], int(r["label"])) for r in csv.DictReader(f)]
+    flagged = [(bool(detector.detect_vulnerabilities(t)), l) for t, l in rows]
+    tp = sum(1 for p, l in flagged if p and l)
+    fp = sum(1 for p, l in flagged if p and not l)
+    fn = sum(1 for p, l in flagged if not p and l)
+    assert tp / (tp + fp) >= 0.95
+    assert tp / (tp + fn) >= 0.30

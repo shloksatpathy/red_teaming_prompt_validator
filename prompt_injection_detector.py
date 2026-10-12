@@ -46,10 +46,18 @@ class PromptInjectionDetector:
             ),
             "role_override": (
                 re.compile(
-                    r"\b(?:forget|pretend|imagine|assume|act as if)\b.{0,40}\b(?:you|your|you're|ai|assistant|model)\b|\broleplay\b.*?\b(?:ignore|forget|bypass)\b",
+                    r"\b(?:forget|pretend|imagine|assume|act as if|stell dir vor)\b.{0,40}\b(?:you|your|you're|ai|ki|assistant|model|du)\b|\broleplay\b.*?\b(?:ignore|forget|bypass)\b",
                     re.IGNORECASE,
                 ),
                 RiskLevel.HIGH,
+            ),
+            "context_reset": (
+                re.compile(
+                    r"\b(?:forget|ignore|disregard)\s+(?:everything|all)\b.{0,20}\b(?:above|before|previous\w*|said|told)\b"
+                    r"|\bnew\s+instructions?\s+follow\b",
+                    re.IGNORECASE,
+                ),
+                RiskLevel.CRITICAL,
             ),
             "context_injection": (
                 re.compile(
@@ -114,7 +122,10 @@ class PromptInjectionDetector:
                 re.compile(
                     r"\bignora\w*\s+(?:todas\s+)?(?:las\s+)?instrucciones\b"
                     r"|\bignor\w*\s+(?:toutes\s+)?les\s+instructions\b"
-                    r"|\bignorier\w*\s+(?:alle\s+)?(?:vorherigen\s+|früheren\s+)?anweisungen\b"
+                    r"|\bignorier\w*\b.{0,30}\banweisung\w*"
+                    r"|\bvergiss\b.{0,30}\b(?:alles|anweisung\w*|davor|obige\w*)\b"
+                    r"|\babweichend\s+(?:zu|von)\s+vorherigen\s+(?:instruktionen|anweisungen)\b"
+                    r"|\balle\s+vorherigen\s+informationen\b"
                     r"|\bignor\w*\s+(?:todas\s+)?as\s+instruções\b"
                     r"|\bignora\s+(?:tutte\s+)?le\s+istruzioni\b"
                     r"|игнорируй\w*\s+(?:все\s+)?(?:предыдущие\s+)?инструкции"
@@ -222,6 +233,7 @@ class PromptInjectionDetector:
         suggestions = {
             "instruction_override": "Implement prompt guards that prevent users from overriding system instructions. Use clear separators between system and user prompts.",
             "role_override": "Avoid allowing users to change the assistant's role dynamically. Lock the role definition at the system prompt level.",
+            "context_reset": "Keep system instructions in a separate, higher-priority channel so user text such as 'forget everything above' cannot reset the context.",
             "context_injection": "Use strict parsing for time-based or context-based instructions. Validate and sanitize all user input before including in prompts.",
             "delimiter_manipulation": "Use consistent, machine-readable delimiters that cannot be easily exploited. Escape user input that contains delimiters.",
             "prompt_leaking": "Never reveal the system prompt to users. Use input validation to block queries asking for system information.",
