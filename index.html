@@ -266,6 +266,24 @@
             margin-bottom: 8px;
         }
 
+        .highlighted-prompt {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .highlighted-prompt mark {
+            background: #ffcdd2;
+            color: #b71c1c;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
         .vulnerability-pattern {
             font-family: 'Courier New', monospace;
             background: rgba(0,0,0,0.05);
@@ -461,7 +479,10 @@
                 <div class="button-group">
                     <button class="btn-primary" onclick="validatePrompt()">Analyze Prompt</button>
                     <button class="btn-secondary" onclick="clearInput()">Clear</button>
+                    <input type="file" id="batchFile" accept=".txt,.json" style="display: none;" onchange="uploadBatch(this)">
+                    <button class="btn-secondary" onclick="document.getElementById('batchFile').click()">Upload File (.txt / .json)</button>
                 </div>
+                <div id="batchSummary" style="margin-top: 15px; color: #667eea;"></div>
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
                     <p style="margin-top: 15px; color: #667eea;">Analyzing prompt...</p>
@@ -554,6 +575,8 @@
 
                 <div class="summary">${result.summary}</div>
 
+                <div class="highlighted-prompt">${highlightPrompt(result.prompt, result.findings)}</div>
+
                 <div class="risk-score-container">
                     <div class="risk-score-label">Risk Score: ${result.risk_score}/100</div>
                     <div class="risk-score-bar">
@@ -589,6 +612,60 @@
             content.innerHTML = html;
         }
 
+        async function uploadBatch(input) {
+            const file = input.files[0];
+            input.value = '';
+            const text = await file.text();
+            const prompts = file.name.endsWith('.json')
+                ? JSON.parse(text)
+                : text.split('\n').map(line => line.trim()).filter(line => line);
+
+            hideError();
+            showLoading(true);
+            const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+            try {
+                for (let i = 0; i < prompts.length; i += 50) {
+                    const response = await fetch('/batch-validate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompts: prompts.slice(i, i + 50) })
+                    });
+                    if (!response.ok) throw new Error((await response.json()).error || 'Batch failed');
+                    (await response.json()).results.forEach(r => counts[r.overall_risk_level]++);
+                }
+                document.getElementById('batchSummary').textContent =
+                    `Analyzed ${Object.values(counts).reduce((a, b) => a + b, 0)} of ${prompts.length} prompts: ` +
+                    `${counts.critical} critical, ${counts.high} high, ${counts.medium} medium, ${counts.low} low`;
+                loadHistory();
+                loadStats();
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function highlightPrompt(prompt, findings) {
+            const lower = prompt.toLowerCase();
+            const ranges = [];
+            findings.forEach(f => {
+                const match = f.pattern_matched.toLowerCase();
+                const start = lower.indexOf(match);
+                if (start >= 0) ranges.push([start, start + match.length]);
+            });
+            ranges.sort((a, b) => a[0] - b[0]);
+
+            let html = '';
+            let pos = 0;
+            ranges.forEach(([start, end]) => {
+                if (end <= pos) return;
+                start = Math.max(start, pos);
+                html += escapeHtml(prompt.slice(pos, start)) + '<mark>' + escapeHtml(prompt.slice(start, end)) + '</mark>';
+                pos = end;
+            });
+            return html + escapeHtml(prompt.slice(pos));
+        }
+
         async function loadHistory() {
             try {
                 const response = await fetch('/results');
@@ -598,12 +675,9 @@
                 const historyContent = document.getElementById('historyContent');
                 let html = '';
 
-                const allResults = [
-                    ...data.critical,
-                    ...data.high,
-                    ...data.medium,
-                    ...data.low
-                ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const allResults = Object.entries(data)
+                    .flatMap(([level, items]) => items.map(item => ({ ...item, risk_level: level })))
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                 if (allResults.length === 0) {
                     historyContent.innerHTML = '<div class="empty-state">No analyses yet. Validate a prompt to get started!</div>';
@@ -686,10 +760,30 @@
                     </div>
                 `;
 
+                const resultsResponse = await fetch('/results');
+                const results = Object.values(await resultsResponse.json())
+                    .flat()
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                html += `<div style="margin-top: 25px;"><h3 style="color: #667eea; margin-bottom: 15px;">Risk Score Trend</h3>${trendChart(results)}</div>`;
+
                 statsContent.innerHTML = html;
             } catch (error) {
                 console.error('Failed to load stats:', error);
             }
+        }
+
+        function trendChart(results) {
+            if (results.length < 2) return '<p style="color: #999;">At least two analyses are needed for a trend.</p>';
+            const width = 600, height = 160;
+            const points = results.map((r, i) => {
+                const x = (i / (results.length - 1)) * width;
+                const y = height - (r.risk_score / 100) * height;
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            return `<svg viewBox="0 0 ${width} ${height}" style="width: 100%; background: #f9f9f9; border-radius: 8px;">
+                <polyline points="${points}" fill="none" stroke="#667eea" stroke-width="2" />
+            </svg>
+            <div style="display: flex; justify-content: space-between; color: #999; font-size: 0.8em;"><span>oldest</span><span>0-100 risk score</span><span>latest</span></div>`;
         }
 
         async function loadResult(id) {

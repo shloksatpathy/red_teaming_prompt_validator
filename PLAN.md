@@ -27,9 +27,9 @@
 - [x] CSV/JSON export of history; OpenAPI spec. (`GET /export?format=csv|json`, `GET /openapi.json`)
 
 ## 4. Frontend
-- [ ] Highlight matched text inside the prompt.
-- [ ] Trend charts from `/stats`.
-- [ ] File upload for batch analysis.
+- [x] Highlight matched text inside the prompt.
+- [x] Trend charts from `/stats`. (Risk-score line chart on the Statistics tab, built from `/results` because `/stats` has no time series. Also fixed history badges, which always showed LOW.)
+- [x] File upload for batch analysis. (.txt one prompt per line, or .json array)
 
 ## 5. Engineering hygiene
 - [ ] Run `test_detector.py` in CI (GitHub Actions); add tests for `server.py`.
