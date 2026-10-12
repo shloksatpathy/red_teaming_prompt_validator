@@ -174,16 +174,16 @@ class PromptInjectionDetector:
         if not findings:
             return 0.0
 
-        risk_weights = {
-            RiskLevel.LOW: 1,
-            RiskLevel.MEDIUM: 3,
-            RiskLevel.HIGH: 5,
-            RiskLevel.CRITICAL: 10,
+        # Base from the worst finding; each extra finding adds 3, capped at 20.
+        # Ranges (LOW 10-30, MEDIUM 30-50, HIGH 55-75, CRITICAL 80-100) match the overall level.
+        base = {
+            RiskLevel.LOW: 10,
+            RiskLevel.MEDIUM: 30,
+            RiskLevel.HIGH: 55,
+            RiskLevel.CRITICAL: 80,
         }
-
-        total_score = sum(risk_weights[f.risk_level] for f in findings)
-        max_possible = len(findings) * 10
-        return min((total_score / max_possible) * 100, 100.0)
+        worst = max(base[f.risk_level] for f in findings)
+        return float(worst + min(3 * (len(findings) - 1), 20))
 
     def get_overall_risk_level(self, findings: List[VulnerabilityFinding]) -> RiskLevel:
         if not findings:

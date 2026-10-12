@@ -6,7 +6,7 @@
 - [x] Fix regex problems:
   - [x] `role_override` is a bare alternation (`forget|pretend|imagine|assume|...`), so any occurrence triggers it and `roleplay.*(ignore|...)` binds only to the last alternative; group it properly and require injection context.
   - [x] Add word boundaries: case-insensitive `DAN` matches inside "abundance" and "Dan"; `unrestricted` and `unicode` also match anywhere.
-- [ ] Fix risk score semantics: it is the mean severity, so adding a weak finding lowers it (Critical + Medium = 65, Critical alone = 100) and it can disagree with the overall level (the max severity). Make it monotonic in evidence (e.g. max severity plus a capped bonus per extra finding) and keep it consistent with the level.
+- [x] Fix risk score semantics: it is the mean severity, so adding a weak finding lowers it (Critical + Medium = 65, Critical alone = 100) and it can disagree with the overall level (the max severity). Make it monotonic in evidence (e.g. max severity plus a capped bonus per extra finding) and keep it consistent with the level.
 - [x] Fix dedup bugs: severity is compared as strings (`"medium" > "high"`), and the keyword "already found" check compares against whole matched phrases, so it rarely matches. Compare by enum order.
 - [ ] Catch evasion: normalize text before scanning.
   - [ ] Unicode homoglyphs and zero-width characters.
