@@ -1,12 +1,15 @@
 import base64
 import codecs
+import json
 import re
 import unicodedata
+from pathlib import Path
 from typing import Dict, List, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
 
+PATTERNS_FILE = Path(__file__).parent / "patterns.json"
 ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u00ad"))
 HOMOGLYPHS = str.maketrans("аеорсхіѕԁοναιр", "aeopcxisdovaip")
 LEET = str.maketrans("013457@$", "oieastas")
@@ -31,143 +34,21 @@ class VulnerabilityFinding:
 
 
 class PromptInjectionDetector:
-    def __init__(self):
-        self.patterns = self._initialize_patterns()
-        self.keywords = self._initialize_keywords()
-
-    def _initialize_patterns(self) -> Dict[str, Tuple[re.Pattern, RiskLevel]]:
-        return {
-            "instruction_override": (
-                re.compile(
-                    r"\b(ignore|override|bypass|disregard)\s+(?:all\s+)?(previous|prior|earlier)?.*?(instructions?|rules?|guidelines?|constraints?|prompts?)",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.CRITICAL,
-            ),
-            "role_override": (
-                re.compile(
-                    r"\b(?:forget|pretend|imagine|assume|act as if|stell dir vor)\b.{0,40}\b(?:you|your|you're|ai|ki|assistant|model|du)\b|\broleplay\b.*?\b(?:ignore|forget|bypass)\b",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.HIGH,
-            ),
-            "context_reset": (
-                re.compile(
-                    r"\b(?:forget|ignore|disregard)\s+(?:everything|all)\b.{0,20}\b(?:above|before|previous\w*|said|told)\b"
-                    r"|\bnew\s+instructions?\s+follow\b",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.CRITICAL,
-            ),
-            "context_injection": (
-                re.compile(
-                    r"(?:from now on|henceforth|starting now).*?(?:ignore|forget|act as)",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.HIGH,
-            ),
-            "delimiter_manipulation": (
-                re.compile(
-                    r"(?:---+|===+|###|<<<|>>>|\$\$\$).*?(?:ignore|override|end)",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.MEDIUM,
-            ),
-            "prompt_leaking": (
-                re.compile(
-                    r"(?:reveal|show|print|display|output).*?(?:system prompt|original prompt|instructions|rules)",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.HIGH,
-            ),
-            "jailbreak_attempt": (
-                re.compile(
-                    r"(?-i:\bDAN\b)|\b(?:do anything now|unrestricted|no safety)\b|\bdisable\b.*?\bfilter",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.CRITICAL,
-            ),
-            "nested_injection": (
-                re.compile(
-                    r"(?:\[|\{).*?(?:ignore|override|execute).*?(?:\]|\})", re.IGNORECASE
-                ),
-                RiskLevel.MEDIUM,
-            ),
-            "meta_prompt_exposure": (
-                re.compile(
-                    r"(?:what|who).*?(?:were|are|was|is).*?(?:told|instructed|programmed|designed)",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.MEDIUM,
-            ),
-            "indirect_injection": (
-                re.compile(
-                    r"\b(?:note|message|instructions?|attention)\s+(?:to|for)\s+(?:the\s+)?(?:ai|assistant|llm|model)\b"
-                    r"|<!--.*?(?:ignore|instruction|assistant).*?-->"
-                    r"|\bwhen\s+(?:the\s+)?(?:ai|assistant|llm|model)\s+(?:reads|summari[sz]es|processes)\b",
-                    re.IGNORECASE | re.DOTALL,
-                ),
-                RiskLevel.HIGH,
-            ),
-            "multi_turn_manipulation": (
-                re.compile(
-                    r"(?:^|\n)\s*(?:system|assistant)\s*:"
-                    r"|\[/?INST\]|<\|im_(?:start|end)\|>"
-                    r"|\b(?:as we agreed|you already agreed|you previously (?:agreed|said)|earlier you (?:agreed|said|promised))\b",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.HIGH,
-            ),
-            "multilingual_override": (
-                re.compile(
-                    r"\bignora\w*\s+(?:todas\s+)?(?:las\s+)?instrucciones\b"
-                    r"|\bignor\w*\s+(?:toutes\s+)?les\s+instructions\b"
-                    r"|\bignorier\w*\b.{0,30}\banweisung\w*"
-                    r"|\bvergiss\b.{0,30}\b(?:alles|anweisung\w*|davor|obige\w*)\b"
-                    r"|\babweichend\s+(?:zu|von)\s+vorherigen\s+(?:instruktionen|anweisungen)\b"
-                    r"|\balle\s+vorherigen\s+informationen\b"
-                    r"|\bignor\w*\s+(?:todas\s+)?as\s+instruções\b"
-                    r"|\bignora\s+(?:tutte\s+)?le\s+istruzioni\b"
-                    r"|игнорируй\w*\s+(?:все\s+)?(?:предыдущие\s+)?инструкции"
-                    r"|忽略.{0,6}(?:指令|指示|提示)",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.CRITICAL,
-            ),
-            "encoding_bypass": (
-                re.compile(
-                    r"\b(?:base64|rot13|unicode|encoded|escaped)\b.*?\bdecode\b|\bdecode\b.*?\b(?:base64|rot13|unicode)\b",
-                    re.IGNORECASE,
-                ),
-                RiskLevel.HIGH,
-            ),
+    def __init__(self, patterns_file: Path = PATTERNS_FILE):
+        with open(patterns_file, encoding="utf-8") as f:
+            rules = json.load(f)
+        self.patterns = {
+            category: (re.compile(rule["regex"]), RiskLevel(rule["level"]))
+            for category, rule in rules["patterns"].items()
         }
-
-    def _initialize_keywords(self) -> Dict[str, Tuple[List[str], RiskLevel]]:
-        # Ambiguous single words are LOW review hints; only specific terms keep a high severity.
-        return {
-            "instruction_keywords": (
-                ["ignore", "bypass", "override", "disregard", "forget"],
-                RiskLevel.LOW,
-            ),
-            "system_keywords": (
-                [
-                    "system prompt",
-                    "original prompt",
-                    "initial instructions",
-                    "true instructions",
-                    "real purpose",
-                ],
-                RiskLevel.HIGH,
-            ),
-            "dangerous_commands": (
-                ["execute", "eval", "sys.exit", "os.system", "subprocess"],
-                RiskLevel.CRITICAL,
-            ),
-            "extraction_keywords": (
-                ["reveal", "dump", "leak"],
-                RiskLevel.LOW,
-            ),
+        self.keywords = {
+            category: (rule["words"], RiskLevel(rule["level"]))
+            for category, rule in rules["keywords"].items()
+        }
+        self.suggestions = {
+            category: rule["suggestion"]
+            for section in ("patterns", "keywords")
+            for category, rule in rules[section].items()
         }
 
     def _variants(self, prompt: str) -> List[str]:
@@ -230,26 +111,7 @@ class PromptInjectionDetector:
         return findings
 
     def _get_suggestion(self, category: str) -> str:
-        suggestions = {
-            "instruction_override": "Implement prompt guards that prevent users from overriding system instructions. Use clear separators between system and user prompts.",
-            "role_override": "Avoid allowing users to change the assistant's role dynamically. Lock the role definition at the system prompt level.",
-            "context_reset": "Keep system instructions in a separate, higher-priority channel so user text such as 'forget everything above' cannot reset the context.",
-            "context_injection": "Use strict parsing for time-based or context-based instructions. Validate and sanitize all user input before including in prompts.",
-            "delimiter_manipulation": "Use consistent, machine-readable delimiters that cannot be easily exploited. Escape user input that contains delimiters.",
-            "prompt_leaking": "Never reveal the system prompt to users. Use input validation to block queries asking for system information.",
-            "jailbreak_attempt": "Implement safety guidelines in the system prompt. Use content moderation to detect and block jailbreak attempts.",
-            "nested_injection": "Parse and validate all nested structures. Remove or escape special characters in user input.",
-            "meta_prompt_exposure": "Avoid questions about the AI's design or instructions. Use response filtering to block meta-questions.",
-            "encoding_bypass": "Implement checks for encoded payloads. Decode and analyze any suspicious encoded content in user input.",
-            "indirect_injection": "Treat retrieved documents, web pages and tool output as untrusted data. Delimit them clearly and instruct the model never to follow instructions found inside.",
-            "multi_turn_manipulation": "Do not trust role markers or claims about earlier turns in user content. Keep conversation history server-side and strip fake role tags.",
-            "multilingual_override": "Apply injection filters in every language you support, or translate input before filtering.",
-            "instruction_keywords": "Avoid using common override keywords in system prompts. Use content filtering on user inputs.",
-            "system_keywords": "Add explicit safeguards that prevent disclosure of system prompts or instructions.",
-            "dangerous_commands": "Never allow direct execution of code or system commands. Use sandboxed environments with strict permissions.",
-            "extraction_keywords": "Implement filters to block extraction attempts. Use response validation to ensure sensitive information isn't leaked.",
-        }
-        return suggestions.get(category, "Review the system prompt design and implement additional input validation.")
+        return self.suggestions[category]
 
     def calculate_risk_score(self, findings: List[VulnerabilityFinding]) -> float:
         if not findings:
