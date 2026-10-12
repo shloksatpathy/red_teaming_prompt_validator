@@ -8,6 +8,7 @@ import hashlib
 from pathlib import Path
 from dotenv import load_dotenv
 from prompt_injection_detector import PromptInjectionDetector
+from harden import harden_prompt
 
 load_dotenv()
 
@@ -112,6 +113,13 @@ def validate_prompt():
         }), 200
     except Exception as e:
         return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
+
+
+@app.route('/harden', methods=['POST'])
+def harden():
+    """Suggest fixes and a hardened version of a system prompt. Body: {"prompt": "..."}"""
+    prompt = request.json['prompt'].strip()
+    return jsonify(harden_prompt(prompt)), 200
 
 
 @app.route('/analyze', methods=['POST'])
@@ -262,6 +270,7 @@ def api_info():
         'endpoints': {
             'POST /validate': 'Validate a single prompt for injection vulnerabilities',
             'POST /analyze': 'Alias for /validate',
+            'POST /harden': 'Suggest fixes and a hardened version of a system prompt',
             'POST /batch-validate': 'Validate multiple prompts (up to 50)',
             'GET /result/<id>': 'Retrieve a previous analysis result',
             'GET /results': 'List all analysis results by risk level',

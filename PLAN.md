@@ -19,7 +19,7 @@
 ## 2. Red-teaming features
 - [x] Attack-variant generator that mutates a prompt.
 - [ ] Test harness that sends variants to a target LLM and records whether the injection succeeded.
-- [ ] "Harden my prompt" suggestions beyond the generic recommendations.
+- [x] "Harden my prompt" suggestions beyond the generic recommendations.
 
 ## 3. Backend
 - [ ] Persistence: check how results are stored; move to SQLite if in-memory.
