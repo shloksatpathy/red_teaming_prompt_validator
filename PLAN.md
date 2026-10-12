@@ -3,6 +3,11 @@
 ## 1. Detection quality (highest value)
 - Fix keyword false positives: "run", "show", "output" flag benign prompts, and "run" alone scores Critical.
   - Require keywords to appear in an injection context (e.g. "ignore" near "instructions"), or use keyword hits only to boost pattern matches.
+- Fix regex problems:
+  - `role_override` is a bare alternation (`forget|pretend|imagine|assume|...`), so any occurrence triggers it and `roleplay.*(ignore|...)` binds only to the last alternative; group it properly and require injection context.
+  - Add word boundaries: case-insensitive `DAN` matches inside "abundance" and "Dan"; `unrestricted` and `unicode` also match anywhere.
+- Fix risk score semantics: it is the mean severity, so adding a weak finding lowers it (Critical + Medium = 65, Critical alone = 100) and it can disagree with the overall level (the max severity). Make it monotonic in evidence (e.g. max severity plus a capped bonus per extra finding) and keep it consistent with the level.
+- Fix dedup bugs: severity is compared as strings (`"medium" > "high"`), and the keyword "already found" check compares against whole matched phrases, so it rarely matches. Compare by enum order.
 - Catch evasion: normalize text before scanning.
   - Unicode homoglyphs and zero-width characters.
   - Leetspeak and spaced-out letters.
