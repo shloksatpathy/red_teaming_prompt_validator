@@ -18,7 +18,7 @@
 
 ## 2. Red-teaming features
 - [x] Attack-variant generator that mutates a prompt.
-- [ ] Test harness that sends variants to a target LLM and records whether the injection succeeded.
+- [x] Test harness that sends variants to a target LLM and records whether the injection succeeded. (`harness.py` takes any `target(system_prompt, user_message) -> str` callable; no real model adapter is wired in because no API key is available here.)
 - [x] "Harden my prompt" suggestions beyond the generic recommendations.
 
 ## 3. Backend
