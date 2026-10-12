@@ -8,10 +8,10 @@
   - [x] Add word boundaries: case-insensitive `DAN` matches inside "abundance" and "Dan"; `unrestricted` and `unicode` also match anywhere.
 - [x] Fix risk score semantics: it is the mean severity, so adding a weak finding lowers it (Critical + Medium = 65, Critical alone = 100) and it can disagree with the overall level (the max severity). Make it monotonic in evidence (e.g. max severity plus a capped bonus per extra finding) and keep it consistent with the level.
 - [x] Fix dedup bugs: severity is compared as strings (`"medium" > "high"`), and the keyword "already found" check compares against whole matched phrases, so it rarely matches. Compare by enum order.
-- [ ] Catch evasion: normalize text before scanning.
-  - [ ] Unicode homoglyphs and zero-width characters.
-  - [ ] Leetspeak and spaced-out letters.
-  - [ ] Decode base64/rot13 payloads and rescan (`encoding_bypass` currently only matches the words).
+- [x] Catch evasion: normalize text before scanning.
+  - [x] Unicode homoglyphs and zero-width characters.
+  - [x] Leetspeak and spaced-out letters.
+  - [x] Decode base64/rot13 payloads and rescan (`encoding_bypass` currently only matches the words).
 - [ ] Cover more attack types: indirect injection, multi-turn attacks, non-English prompts.
 - [ ] Optional LLM-as-judge second pass for ambiguous scores.
 - [ ] Benchmark against a public injection dataset (e.g. deepset prompt-injections); report precision/recall and tune risk-score weights.

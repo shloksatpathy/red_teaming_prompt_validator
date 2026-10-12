@@ -1,7 +1,17 @@
+import base64
+import codecs
 import re
+import unicodedata
 from typing import Dict, List, Tuple
 from dataclasses import dataclass
 from enum import Enum
+
+
+ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u00ad"))
+HOMOGLYPHS = str.maketrans("аеорсхіѕԁοναιр", "aeopcxisdovaip")
+LEET = str.maketrans("013457@$", "oieastas")
+SPACED_LETTERS = re.compile(r"\b(?:\w[ .\-_]){3,}\w\b")
+BASE64_TOKEN = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
 
 
 class RiskLevel(Enum):
@@ -118,7 +128,32 @@ class PromptInjectionDetector:
             ),
         }
 
+    def _variants(self, prompt: str) -> List[str]:
+        normalized = unicodedata.normalize("NFKC", prompt).translate(ZERO_WIDTH).translate(HOMOGLYPHS)
+        normalized = SPACED_LETTERS.sub(lambda m: re.sub(r"[ .\-_]", "", m.group(0)), normalized)
+        variants = [prompt, normalized, normalized.translate(LEET)]
+
+        for token in BASE64_TOKEN.findall(normalized):
+            try:
+                variants.append(base64.b64decode(token + "=" * (-len(token) % 4), validate=True).decode("utf-8"))
+            except ValueError:
+                pass
+        if "rot13" in normalized.lower():
+            variants.append(codecs.decode(normalized, "rot13"))
+        return [v for i, v in enumerate(variants) if v not in variants[:i]]
+
     def detect_vulnerabilities(self, prompt: str) -> List[VulnerabilityFinding]:
+        findings = []
+        seen = set()
+        for text in self._variants(prompt):
+            for finding in self._scan(text):
+                key = (finding.category, finding.pattern_matched.lower())
+                if key not in seen:
+                    seen.add(key)
+                    findings.append(finding)
+        return findings
+
+    def _scan(self, prompt: str) -> List[VulnerabilityFinding]:
         findings = []
 
         # Check pattern-based vulnerabilities
