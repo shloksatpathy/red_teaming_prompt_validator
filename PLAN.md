@@ -17,7 +17,7 @@
 - [x] Benchmark against a public injection dataset (e.g. deepset prompt-injections); report precision/recall and tune risk-score weights. Result: precision 1.00, recall 0.33 (`python3 benchmark/run.py`). Recall is bounded by rule coverage (many dataset injections are plain task hijacks with no trigger phrase), not by the score weights, so the weights were left as is.
 
 ## 2. Red-teaming features
-- [ ] Attack-variant generator that mutates a prompt.
+- [x] Attack-variant generator that mutates a prompt.
 - [ ] Test harness that sends variants to a target LLM and records whether the injection succeeded.
 - [ ] "Harden my prompt" suggestions beyond the generic recommendations.
 
