@@ -5,6 +5,8 @@ import os
 import json
 from datetime import datetime
 import hashlib
+import time
+from collections import defaultdict
 from pathlib import Path
 from dotenv import load_dotenv
 from prompt_injection_detector import PromptInjectionDetector
@@ -12,7 +14,8 @@ from harden import harden_prompt
 
 load_dotenv()
 
-app = Flask(__name__, static_folder='.', static_url_path='')
+app = Flask(__name__, static_folder=None)
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
 
 # Configure CORS
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5000')
@@ -39,6 +42,27 @@ for folder in [CRITICAL_FOLDER, HIGH_FOLDER, MEDIUM_FOLDER, LOW_FOLDER]:
 detector = PromptInjectionDetector()
 
 MAX_PROMPT_LENGTH = 10000
+RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', 60))
+API_KEY = os.getenv('API_KEY')
+request_times = defaultdict(list)
+
+
+@app.before_request
+def check_api_key_and_rate_limit():
+    if request.path in ('/', '/health'):
+        return None
+
+    if API_KEY and request.headers.get('X-API-Key') != API_KEY:
+        return jsonify({'error': 'Invalid or missing API key'}), 401
+
+    now = time.time()
+    recent = [t for t in request_times[request.remote_addr] if now - t < 60]
+    if len(recent) >= RATE_LIMIT_PER_MINUTE:
+        request_times[request.remote_addr] = recent
+        return jsonify({'error': 'Rate limit exceeded'}), 429
+    recent.append(now)
+    request_times[request.remote_addr] = recent
+    return None
 
 
 def generate_prompt_id(prompt: str) -> str:
@@ -207,7 +231,7 @@ def batch_validate():
 
     results = []
     for prompt in prompts:
-        if isinstance(prompt, str) and prompt.strip():
+        if isinstance(prompt, str) and prompt.strip() and len(prompt) <= MAX_PROMPT_LENGTH:
             report = detector.generate_report(prompt.strip())
             prompt_id = save_analysis(report)
             results.append({

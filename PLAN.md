@@ -22,8 +22,8 @@
 - [x] "Harden my prompt" suggestions beyond the generic recommendations.
 
 ## 3. Backend
-- [ ] Persistence: check how results are stored; move to SQLite if in-memory.
-- [ ] Rate limiting, API key, input size limits, run under gunicorn.
+- [x] Persistence: check how results are stored; move to SQLite if in-memory. (Checked: results are JSON files in `validation_results/`, not in memory, so no move. They are still lost on Render's ephemeral disk.)
+- [x] Rate limiting, API key, input size limits, run under gunicorn. (Per-IP rate limit per worker, optional `API_KEY` env var checked via `X-API-Key`, 1 MB body cap, per-prompt cap in batch; gunicorn was already the Render start command. Also fixed: `static_folder='.'` exposed `server.py` and `.env` over HTTP.)
 - [ ] CSV/JSON export of history; OpenAPI spec.
 
 ## 4. Frontend
