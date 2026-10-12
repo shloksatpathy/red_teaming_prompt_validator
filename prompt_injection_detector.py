@@ -92,6 +92,37 @@ class PromptInjectionDetector:
                 ),
                 RiskLevel.MEDIUM,
             ),
+            "indirect_injection": (
+                re.compile(
+                    r"\b(?:note|message|instructions?|attention)\s+(?:to|for)\s+(?:the\s+)?(?:ai|assistant|llm|model)\b"
+                    r"|<!--.*?(?:ignore|instruction|assistant).*?-->"
+                    r"|\bwhen\s+(?:the\s+)?(?:ai|assistant|llm|model)\s+(?:reads|summari[sz]es|processes)\b",
+                    re.IGNORECASE | re.DOTALL,
+                ),
+                RiskLevel.HIGH,
+            ),
+            "multi_turn_manipulation": (
+                re.compile(
+                    r"(?:^|\n)\s*(?:system|assistant)\s*:"
+                    r"|\[/?INST\]|<\|im_(?:start|end)\|>"
+                    r"|\b(?:as we agreed|you already agreed|you previously (?:agreed|said)|earlier you (?:agreed|said|promised))\b",
+                    re.IGNORECASE,
+                ),
+                RiskLevel.HIGH,
+            ),
+            "multilingual_override": (
+                re.compile(
+                    r"\bignora\w*\s+(?:todas\s+)?(?:las\s+)?instrucciones\b"
+                    r"|\bignor\w*\s+(?:toutes\s+)?les\s+instructions\b"
+                    r"|\bignorier\w*\s+(?:alle\s+)?(?:vorherigen\s+|früheren\s+)?anweisungen\b"
+                    r"|\bignor\w*\s+(?:todas\s+)?as\s+instruções\b"
+                    r"|\bignora\s+(?:tutte\s+)?le\s+istruzioni\b"
+                    r"|игнорируй\w*\s+(?:все\s+)?(?:предыдущие\s+)?инструкции"
+                    r"|忽略.{0,6}(?:指令|指示|提示)",
+                    re.IGNORECASE,
+                ),
+                RiskLevel.CRITICAL,
+            ),
             "encoding_bypass": (
                 re.compile(
                     r"\b(?:base64|rot13|unicode|encoded|escaped)\b.*?\bdecode\b|\bdecode\b.*?\b(?:base64|rot13|unicode)\b",
@@ -198,6 +229,9 @@ class PromptInjectionDetector:
             "nested_injection": "Parse and validate all nested structures. Remove or escape special characters in user input.",
             "meta_prompt_exposure": "Avoid questions about the AI's design or instructions. Use response filtering to block meta-questions.",
             "encoding_bypass": "Implement checks for encoded payloads. Decode and analyze any suspicious encoded content in user input.",
+            "indirect_injection": "Treat retrieved documents, web pages and tool output as untrusted data. Delimit them clearly and instruct the model never to follow instructions found inside.",
+            "multi_turn_manipulation": "Do not trust role markers or claims about earlier turns in user content. Keep conversation history server-side and strip fake role tags.",
+            "multilingual_override": "Apply injection filters in every language you support, or translate input before filtering.",
             "instruction_keywords": "Avoid using common override keywords in system prompts. Use content filtering on user inputs.",
             "system_keywords": "Add explicit safeguards that prevent disclosure of system prompts or instructions.",
             "dangerous_commands": "Never allow direct execution of code or system commands. Use sandboxed environments with strict permissions.",

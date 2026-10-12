@@ -12,7 +12,7 @@
   - [x] Unicode homoglyphs and zero-width characters.
   - [x] Leetspeak and spaced-out letters.
   - [x] Decode base64/rot13 payloads and rescan (`encoding_bypass` currently only matches the words).
-- [ ] Cover more attack types: indirect injection, multi-turn attacks, non-English prompts.
+- [x] Cover more attack types: indirect injection, multi-turn attacks, non-English prompts.
 - [ ] Optional LLM-as-judge second pass for ambiguous scores.
 - [ ] Benchmark against a public injection dataset (e.g. deepset prompt-injections); report precision/recall and tune risk-score weights.
 
