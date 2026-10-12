@@ -24,7 +24,7 @@
 ## 3. Backend
 - [x] Persistence: check how results are stored; move to SQLite if in-memory. (Checked: results are JSON files in `validation_results/`, not in memory, so no move. They are still lost on Render's ephemeral disk.)
 - [x] Rate limiting, API key, input size limits, run under gunicorn. (Per-IP rate limit per worker, optional `API_KEY` env var checked via `X-API-Key`, 1 MB body cap, per-prompt cap in batch; gunicorn was already the Render start command. Also fixed: `static_folder='.'` exposed `server.py` and `.env` over HTTP.)
-- [ ] CSV/JSON export of history; OpenAPI spec.
+- [x] CSV/JSON export of history; OpenAPI spec. (`GET /export?format=csv|json`, `GET /openapi.json`)
 
 ## 4. Frontend
 - [ ] Highlight matched text inside the prompt.

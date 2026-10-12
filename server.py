@@ -1,8 +1,10 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, Response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 import json
+import csv
+import io
 from datetime import datetime
 import hashlib
 import time
@@ -195,6 +197,37 @@ def list_results():
     return jsonify(results), 200
 
 
+@app.route('/export', methods=['GET'])
+def export_results():
+    """Export full analysis history. Query: ?format=json (default) or ?format=csv"""
+    rows = []
+    for folder in [CRITICAL_FOLDER, HIGH_FOLDER, MEDIUM_FOLDER, LOW_FOLDER]:
+        for file in os.listdir(folder):
+            if file.endswith('.json'):
+                with open(os.path.join(folder, file), 'r') as f:
+                    rows.append(json.load(f))
+
+    if request.args.get('format', 'json') == 'csv':
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(['id', 'timestamp', 'overall_risk_level', 'risk_score', 'vulnerability_count', 'categories', 'prompt'])
+        for r in rows:
+            writer.writerow([
+                r['id'], r['timestamp'], r['overall_risk_level'], r['risk_score'], r['vulnerability_count'],
+                ';'.join(f['category'] for f in r['findings']), r['prompt']
+            ])
+        return Response(out.getvalue(), mimetype='text/csv',
+                        headers={'Content-Disposition': 'attachment; filename=analyses.csv'})
+
+    return jsonify(rows), 200
+
+
+@app.route('/openapi.json', methods=['GET'])
+def openapi():
+    with open('openapi.json', 'r') as f:
+        return Response(f.read(), mimetype='application/json')
+
+
 @app.route('/delete/<prompt_id>', methods=['DELETE'])
 def delete_result(prompt_id):
     """Delete an analysis result"""
@@ -298,6 +331,8 @@ def api_info():
             'POST /batch-validate': 'Validate multiple prompts (up to 50)',
             'GET /result/<id>': 'Retrieve a previous analysis result',
             'GET /results': 'List all analysis results by risk level',
+            'GET /export': 'Export all analyses as JSON or CSV (?format=csv)',
+            'GET /openapi.json': 'OpenAPI specification',
             'GET /stats': 'Get statistics about all analyses',
             'DELETE /delete/<id>': 'Delete an analysis result',
             'GET /health': 'Health check endpoint'
