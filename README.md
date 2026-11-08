@@ -2,6 +2,10 @@
 
 A comprehensive tool for detecting and analyzing prompt injection vulnerabilities in Large Language Model (LLM) prompts. This validator helps security researchers, developers, and AI safety teams identify security weaknesses before deploying prompts to production.
 
+## About
+
+Rule-based detector for prompt injection and jailbreak attempts in LLM prompts, with risk scoring, a REST API and a web dashboard.
+
 ## Features
 
 - ✅ **Pattern-Based Detection**: Identifies common prompt injection techniques using regex patterns
