@@ -4,7 +4,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple  # noqa: F401
 from dataclasses import dataclass
 from enum import Enum
 

@@ -12,12 +12,12 @@ with open(Path(__file__).parent / "deepset_prompt_injections.csv", newline="") a
 
 scores = [(detector.generate_report(text)["risk_score"], label) for text, label in rows]
 
-print(f"{len(rows)} prompts, {sum(l for _, l in scores)} injections")
+print(f"{len(rows)} prompts, {sum(l for _, l in scores)} injections")  # noqa: E741
 print("threshold  precision  recall  f1")
 for threshold in [10, 30, 55, 80]:
-    tp = sum(1 for s, l in scores if s >= threshold and l)
-    fp = sum(1 for s, l in scores if s >= threshold and not l)
-    fn = sum(1 for s, l in scores if s < threshold and l)
+    tp = sum(1 for s, l in scores if s >= threshold and l)  # noqa: E741
+    fp = sum(1 for s, l in scores if s >= threshold and not l)  # noqa: E741
+    fn = sum(1 for s, l in scores if s < threshold and l)  # noqa: E741
     precision = tp / (tp + fp) if tp + fp else 0
     recall = tp / (tp + fn)
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0

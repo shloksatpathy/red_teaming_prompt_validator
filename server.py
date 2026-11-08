@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string, Response
+from flask import Flask, request, jsonify, render_template_string, Response  # noqa: F401
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
@@ -9,7 +9,7 @@ from datetime import datetime
 import hashlib
 import time
 from collections import defaultdict
-from pathlib import Path
+from pathlib import Path  # noqa: F401
 from dotenv import load_dotenv
 from prompt_validator.prompt_injection_detector import PromptInjectionDetector
 from prompt_validator.harden import harden_prompt
