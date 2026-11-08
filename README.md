@@ -51,7 +51,7 @@ Rules live in `prompt_validator/patterns.json` (regexes, keywords, levels, sugge
 
 ### 1. Clone the repository
 ```bash
-git clone <repository-url> red_teaming_prompt_validator
+git clone https://github.com/shloksatpathy/red_teaming_prompt_validator.git
 cd red_teaming_prompt_validator
 ```
 
@@ -285,7 +285,11 @@ echo "some prompt" | prompt-validator -
 
 Use it as a pre-commit hook by pointing a `repo:` entry at this repository and selecting the `prompt-validator` hook (see `.pre-commit-hooks.yaml`).
 
-Python library: `from prompt_validator.prompt_injection_detector import PromptInjectionDetector`. `prompt_validator.harness.run_harness(target, system_prompt, attack, canary)` takes any `target(system_prompt, user_message) -> str` function, so you can plug in your own model client.
+Python library:
+
+- `from prompt_validator.prompt_injection_detector import PromptInjectionDetector`, then `PromptInjectionDetector().generate_report(text)`.
+- `prompt_validator.attack_variants.generate_variants(attack)` returns evasion variants of an attack (uppercase, zero-width, homoglyph, leetspeak, spaced, base64, rot13, polite wrapper, fake delimiter, fake `system:` turn).
+- `prompt_validator.harness.run_harness(target, system_prompt, attack, canary)` sends those variants to any `target(system_prompt, user_message) -> str` function and reports which ones leaked the canary, so you can plug in your own model client.
 
 ## Understanding Risk Scores
 
@@ -356,9 +360,8 @@ Covers the detector (attacks, benign prompts, evasion, other attack types, score
 
 Improvements and additions are welcome! Some ideas:
 - Add more vulnerability patterns
-- Integrate with LLM-based analysis for semantic detection
-- Add machine learning-based classification
-- Create integrations with CI/CD pipelines
+- Optional LLM-as-judge second pass for ambiguous scores
+- Add machine learning-based classification to catch plain task hijacks
 
 ## License
 
@@ -379,5 +382,5 @@ For issues, questions, or suggestions, please refer to the project repository.
 ---
 
 **Version**: 1.0.0
-**Last Updated**: October 2026
+**Last Updated**: November 2026
 **Status**: Active Development
