@@ -26,12 +26,12 @@
       "suggestion": "Use consistent, machine-readable delimiters that cannot be easily exploited. Escape user input that contains delimiters."
     },
     "prompt_leaking": {
-      "regex": "(?i)(?:reveal|show|print|display|output).*?(?:system prompt|original prompt|instructions|rules)",
+      "regex": "(?i)(?:reveal|show|print|display|output).*?(?:system prompt|original prompt|instructions|rules)|\\b(?:repeat|recite|write out)\\b.{0,30}\\b(?:everything|all|text|words)\\s+(?:above|before)\\b|\\b(?:internal|secret|hidden)\\s+(?:reference\\s+)?(?:code|key|password|token)\\b",
       "level": "high",
       "suggestion": "Never reveal the system prompt to users. Use input validation to block queries asking for system information."
     },
     "jailbreak_attempt": {
-      "regex": "(?i)(?-i:\\bDAN\\b)|\\b(?:do anything now|unrestricted|no safety)\\b|\\bdisable\\b.*?\\bfilter",
+      "regex": "(?i)(?-i:\\bDAN\\b)|\\b(?:do anything now|unrestricted|no safety)\\b|\\bdisable\\b.*?\\bfilter|\\b(?:has|have|with)\\s+no\\s+(?:rules|restrictions|limits|filters)\\b|\\bsystem\\s+override\\b|\\bsafety\\s+mode\\s+(?:disabled|off)\\b",
       "level": "critical",
       "suggestion": "Implement safety guidelines in the system prompt. Use content moderation to detect and block jailbreak attempts."
     },
@@ -64,6 +64,16 @@
       "regex": "(?i)\\b(?:base64|rot13|unicode|encoded|escaped)\\b.*?\\bdecode\\b|\\bdecode\\b.*?\\b(?:base64|rot13|unicode)\\b",
       "level": "high",
       "suggestion": "Implement checks for encoded payloads. Decode and analyze any suspicious encoded content in user input."
+    },
+    "fake_authority": {
+      "regex": "(?i)\\b(?:new|updated)\\s+(?:instructions?|rules?|orders?)\\s+(?:from|by)\\s+(?:the\\s+|your\\s+)?(?:admin\\w*|developer|system|operator|owner)\\b|\\bI\\s*(?:am|'m)\\s+(?:the|your|a)\\s+(?:developer|admin\\w*|creator|owner|operator)\\b",
+      "level": "high",
+      "suggestion": "Do not trust authority claims made inside user input. State in the system prompt that only the system prompt carries operator instructions."
+    },
+    "fake_role_tag": {
+      "regex": "(?i)</?\\s*(?:system|assistant|im_start|im_end)\\s*>|<\\|im_(?:start|end)\\|>|\\bend\\s+of\\s+(?:user\\s+)?(?:input|prompt|instructions)\\b",
+      "level": "critical",
+      "suggestion": "Strip or escape chat-template tokens and role tags (<system>, <|im_start|>) from user input before building the prompt."
     }
   },
   "keywords": {

@@ -158,3 +158,11 @@ def test_cli_exit_codes(tmp_path, capsys, monkeypatch):
         main()
     assert fail.value.code == 1
     assert "CRITICAL" in capsys.readouterr().out
+
+
+def test_redteam_attacks_detected():
+    import json
+    from pathlib import Path
+
+    attacks = json.loads((Path(__file__).parent / "benchmark" / "attacks.json").read_text())["attacks"]
+    assert [a["text"] for a in attacks if not detector.detect_vulnerabilities(a["text"])] == []
