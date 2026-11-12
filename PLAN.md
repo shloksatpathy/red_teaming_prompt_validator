@@ -37,6 +37,28 @@
 - [x] Move detection patterns into an editable data file. (`patterns.json`: regexes, keywords, levels and suggestions)
 - [x] Package the detector as a pip library and CLI; add a pre-commit/CI check for prompt files. (`pyproject.toml`, `prompt-validator` command, `.pre-commit-hooks.yaml`; no prompt files remain in this repo, so there is no CI scan step)
 
+## 6. Testing with open-source Hugging Face models
+Two questions: (a) which attacks actually break real open models, and does `harden_prompt` reduce that? (b) how does the rule-based detector compare to, and combine with, open injection classifiers?
+
+### 6a. Open models as harness targets
+- [x] Add an optional `hf` extra to `pyproject.toml` (`transformers`, `torch`, `accelerate`). Keep it out of `requirements.txt` so the Render deploy and CI stay light.
+- [x] `prompt_validator/hf_target.py`: `make_target(model_id) -> target(system_prompt, user_message) -> str`, built on `transformers.pipeline("text-generation")` with chat messages. Use greedy decoding (`do_sample=False`, `max_new_tokens=128`) so runs can be repeated. Only models whose chat template has a system role are supported (no Gemma yet).
+- [x] `benchmark/attacks.json`: 12 attacks, each with a canary (`8841-2290` to output, or the secret `ZEBRA-9182` in the system prompt to leak). Cover instruction override, system-prompt leak, role-play/DAN, delimiter/fake-system, and indirect injection (the attack is inside a "document" the user asks to summarise).
+- [x] `benchmark/redteam.py --model <id>`: for each attack variant, call the target with (1) a plain system prompt and (2) `harden_prompt(plain)["hardened_prompt"]`. Print the attack success rate per variant for each prompt, and write the raw replies to `benchmark/results/<model>.json` (gitignored).
+- [x] Join with the detector: for every variant that succeeded, record whether `PromptInjectionDetector` flagged it. Successful attacks it missed are the most useful input for new `patterns.json` rules.
+- [ ] Models (small enough for CPU or a free Colab T4 first): `Qwen/Qwen2.5-0.5B-Instruct`, `Qwen/Qwen2.5-1.5B-Instruct`, `HuggingFaceTB/SmolLM2-1.7B-Instruct`, `microsoft/Phi-3.5-mini-instruct`; then 7B-class (`mistralai/Mistral-7B-Instruct-v0.3`, `meta-llama/Llama-3.1-8B-Instruct` (gated)) on a GPU.
+- [ ] Record results per model in `benchmark/RESULTS.md` (Qwen2.5-0.5B done).
+
+### 6b. Open injection classifiers as a baseline / second pass
+- [ ] `benchmark/run.py --classifier <id>`: score `deepset_prompt_injections.csv` with a `text-classification` pipeline and print precision/recall/F1 next to the rule-based numbers (currently P 1.00 / R 0.33).
+- [ ] Candidates: `protectai/deberta-v3-base-prompt-injection-v2`, `meta-llama/Llama-Prompt-Guard-2-86M` (gated). Note: deepset is the training data for some of these, so also score the variants from `generate_variants` and the attacks in `benchmark/attacks.json` to get a fair comparison.
+- [ ] Try the union (rules OR classifier). If it clearly raises recall without hurting precision, wire it in as the optional second pass from section 1 (enabled with `--classifier` on the CLI; off by default, so the core package keeps no ML dependency).
+
+### Notes
+- Gated models need `huggingface-cli login` and accepting the licence on the model page.
+- Heavy runs stay out of CI; `test_detector.py` keeps using the fake target. A unit test for `hf_target` can use a tiny model (`sshleifer/tiny-gpt2`) only if it is fast enough.
+- Order: 6b classifier benchmark (cheapest, no generation) → 6a with Qwen 0.5B end to end → add more models.
+
 ## Suggested order
 1. Keyword false-positive fix
 2. Benchmark

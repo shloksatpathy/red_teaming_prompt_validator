@@ -8,6 +8,9 @@ version = "1.0.0"
 description = "Rule-based prompt injection detector and red-teaming helpers"
 requires-python = ">=3.10"
 
+[project.optional-dependencies]
+hf = ["torch", "transformers", "accelerate"]
+
 [project.scripts]
 prompt-validator = "prompt_validator.cli:main"
 

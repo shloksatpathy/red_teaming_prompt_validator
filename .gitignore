@@ -5,6 +5,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 develop-eggs/
@@ -28,3 +29,4 @@ wheels/
 .env.local
 
 validation_results/
+benchmark/results/
