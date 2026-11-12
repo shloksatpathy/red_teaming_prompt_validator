@@ -47,7 +47,7 @@ Two questions: (a) which attacks actually break real open models, and does `hard
 - [x] `benchmark/redteam.py --model <id>`: for each attack variant, call the target with (1) a plain system prompt and (2) `harden_prompt(plain)["hardened_prompt"]`. Print the attack success rate per variant for each prompt, and write the raw replies to `benchmark/results/<model>.json` (gitignored).
 - [x] Join with the detector: for every variant that succeeded, record whether `PromptInjectionDetector` flagged it. Successful attacks it missed are the most useful input for new `patterns.json` rules.
 - [ ] Models (small enough for CPU or a free Colab T4 first): `Qwen/Qwen2.5-0.5B-Instruct`, `Qwen/Qwen2.5-1.5B-Instruct`, `HuggingFaceTB/SmolLM2-1.7B-Instruct`, `microsoft/Phi-3.5-mini-instruct`; then 7B-class (`mistralai/Mistral-7B-Instruct-v0.3`, `meta-llama/Llama-3.1-8B-Instruct` (gated)) on a GPU.
-- [ ] Record results per model in `benchmark/RESULTS.md` (Qwen2.5-0.5B done).
+- [ ] Record results per model in `benchmark/RESULTS.md` (Qwen2.5-0.5B and 1.5B done).
 
 ### 6b. Open injection classifiers as a baseline / second pass
 - [ ] `benchmark/run.py --classifier <id>`: score `deepset_prompt_injections.csv` with a `text-classification` pipeline and print precision/recall/F1 next to the rule-based numbers (currently P 1.00 / R 0.33).
