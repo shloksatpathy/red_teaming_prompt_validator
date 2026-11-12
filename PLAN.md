@@ -63,3 +63,9 @@ Two questions: (a) which attacks actually break real open models, and does `hard
 1. Keyword false-positive fix
 2. Benchmark
 3. Text normalization
+
+### 6c. Follow-ups from the Qwen runs (`benchmark/RESULTS.md`)
+- [x] Find why hardening backfires: not the missing `<user_input>` tags; per-guard ablation blames `instruction_priority` and `role_lock`.
+- [x] Reword both guards without attacker vocabulary. `role_lock` is fixed; `instruction_priority` still raises leaks.
+- [ ] Decide whether to drop or redesign `instruction_priority`, and recheck on a 3B+ model before changing `harden.py` further.
+- [ ] Catch spaced-out variants: the normalizer joins all letters, so word-boundary rules (`\s+`) cannot match.
